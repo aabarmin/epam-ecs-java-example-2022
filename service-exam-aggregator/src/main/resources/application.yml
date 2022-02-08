@@ -1,0 +1,6 @@
+aggregator:
+  providers:
+    - name: math
+      endpoint: http://localhost:8081/
+    - name: history
+      endpoint: http://localhost:8082/
