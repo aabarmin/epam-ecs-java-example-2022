@@ -1,0 +1,18 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: ECR repos for examples
+
+Resources:
+  ServiceExamAggregator:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: "service-exam-aggregator"
+
+  ServiceProviderHistory:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: "service-provider-history"
+
+  ServiceProviderMath:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: "service-provider-math"

@@ -1,0 +1,13 @@
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      java: 11
+
+  pre_build:
+    commands:
+      - chmod +x ./mvnw
+
+  build:
+    commands:
+      - ./mvnw clean package
