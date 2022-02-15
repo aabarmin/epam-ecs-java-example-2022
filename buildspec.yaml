@@ -20,4 +20,24 @@ phases:
       - ./mvnw clean package
       - echo "Building Docker images"
       - |
-        echo ${AWS_REPO_URL}
+        docker build -f ./bin/Dockerfile \
+          --build-arg TARGET_FOLDER=./service-exam-aggregator/target \
+          -t ${AWS_REPO_URL}/service-exam-aggregator:latest \
+          -t aggregator:latest .
+      - |
+        docker build -f ./bin/Dockerfile \
+          --build-arg TARGET_FOLDER=./service-provider-history/target \
+          -t ${AWS_REPO_URL}/service-provider-history:latest \
+          -t provider-history:latest .
+      - |
+        docker build -f ./bin/Dockerfile \
+          --build-arg TARGET_FOLDER=./service-provider-math/target \
+          -t ${AWS_REPO_URL}/service-provider-math:latest \
+          -t provider-math:latest .
+
+  post_build:
+    commands:
+      - echo Pushing Docker images to ECR
+      - docker push ${AWS_REPO_URL}/service-exam-aggregator:latest
+      - docker push ${AWS_REPO_URL}/service-provider-history:latest
+      - docker push ${AWS_REPO_URL}/service-provider-math:latest
