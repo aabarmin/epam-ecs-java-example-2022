@@ -6,9 +6,18 @@ phases:
 
   pre_build:
     commands:
+      - echo "Preparing Apache Maven for build"
       - chmod +x ./mvnw
+      - echo "Logging in to AWS ECR"
+      - |
+        AWS_REPO_URL=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com
+        aws ecr get-login-password --region $A{WS_DEFAULT_REGION} | \
+          docker login --username AWS --password-stdin ${AWS_REPO_URL}
 
   build:
     commands:
+      - echo "Build with Apache Maven"
       - ./mvnw clean package
-      -
+      - echo "Building Docker images"
+      - |
+        echo ${AWS_REPO_URL}
