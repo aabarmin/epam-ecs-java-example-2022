@@ -1,0 +1,64 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: ECR repos for examples
+
+Resources:
+  ECSExampleCodeBuildLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /abarmin/codebuild-test-project
+      RetentionInDays: 3
+
+  ECSExampleCodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: ECS-Example-CodeBuild-ServiceRole
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: LogPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:*
+                Resource: '*'
+
+  ECSExampleCodeBuildInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref ECSExampleCodeBuildServiceRole
+
+  ECSExampleCodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Artifacts:
+        Type: NO_ARTIFACTS
+      ConcurrentBuildLimit: 1
+      Description: AWS CodeBuild project for my examples
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+        Type: LINUX_CONTAINER
+      LogsConfig:
+        CloudWatchLogs:
+          GroupName: /abarmin/codebuild-projects
+          StreamName: example-code-build-project
+          Status: ENABLED
+      Name: AWS-CodeBuild-ECS-Java-Example-2022
+      ServiceRole: !Ref ECSExampleCodeBuildServiceRole
+      Source:
+        Location: https://github.com/aabarmin/epam-ecs-java-example-2022.git
+        Type: GITHUB
+      SourceVersion: main
+      TimeoutInMinutes: 5
