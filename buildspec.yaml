@@ -19,6 +19,8 @@ phases:
           docker login --username AWS --password-stdin 489478819445.dkr.ecr.us-west-2.amazonaws.com
       - echo "Building Docker images"
       - |
+        AWS_REPO_URL=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      - |
         docker build -f ./bin/Dockerfile \
           --build-arg TARGET_FOLDER=./service-exam-aggregator/target \
           -t ${AWS_REPO_URL}/service-exam-aggregator:latest \
@@ -38,7 +40,6 @@ phases:
     commands:
       - echo "Logging in to AWS ECR"
       - |
-        AWS_REPO_URL=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
         aws ecr get-login-password --region $AWS_DEFAULT_REGION | \
           docker login --username AWS --password-stdin ${AWS_REPO_URL}
       - echo Pushing Docker images to ECR
