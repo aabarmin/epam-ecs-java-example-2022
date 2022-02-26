@@ -1,0 +1,21 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: ECS for examples
+
+Parameters:
+  ClusterName:
+    Description: Name of the cluster
+    Type: String
+    Default: my-example-cluster
+
+Resources:
+  ECS:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Ref ClusterName
+
+Outputs: 
+  ClusterArn:
+    Description: ARN of the ECS
+    Value: !Ref ECS
+    Export:
+      Name: !Sub ${AWS::Region}-ecs-cluster

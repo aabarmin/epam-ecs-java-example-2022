@@ -1,0 +1,160 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Task definitions for my talk
+
+Parameters:
+  ExamAggregatorFamily:
+    Description: Exam Aggregator task definition family - name of the task definition
+    Type: String
+    Default: ExamAggregatorTaskDefinition
+  ProviderMathFamily:
+    Description: Math provider task definition family
+    Type: String
+    Default: ProviderMathTaskDefinition
+  ProviderHistoryFamily:
+    Description: History provider task definition family
+    Type: String
+    Default: ProviderHistoryTaskDefinition
+
+Resources: 
+  ECSRoleWithECRAccess:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: ECSRoleWithECRAccess
+      Description: IAM role for ECS to allow access to ECR
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ecs-tasks.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: LogPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:*
+                Resource: '*'
+        - PolicyName: ECRPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - ecr:*
+                Resource: '*'
+
+  ExamAggregatorTaskDefinition: 
+    Type: AWS::ECS::TaskDefinition
+    Properties: 
+      Family: !Ref ExamAggregatorFamily
+      ContainerDefinitions: 
+        - Name: exam-aggregator-container
+          Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/service-exam-aggregator:latest
+          Cpu: 512
+          Memory: 1024
+          PortMappings:
+            - ContainerPort: 8080
+              HostPort: 8080
+          Environment: 
+            - Name: SPRING_PROFILES_ACTIVE
+              Value: ecs
+          LogConfiguration: 
+            LogDriver: awslogs
+            Options: 
+              awslogs-group: '/ecs/example/'
+              awslogs-region: !Ref AWS::Region
+              awslogs-create-group: true
+              awslogs-stream-prefix: 'exam-aggregator'
+      Cpu: 512
+      Memory: 1024
+      NetworkMode: awsvpc
+      ExecutionRoleArn: !GetAtt ECSRoleWithECRAccess.Arn
+      TaskRoleArn: !GetAtt ECSRoleWithECRAccess.Arn
+      RequiresCompatibilities: 
+        - FARGATE
+      RuntimePlatform: 
+        CpuArchitecture: X86_64
+        OperatingSystemFamily: LINUX
+
+  ProviderHistoryTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties: 
+      Family: !Ref ProviderHistoryFamily
+      ContainerDefinitions: 
+        - Name: provider-history-container
+          Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/service-provider-history:latest
+          Cpu: 512
+          Memory: 1024
+          PortMappings:
+            - ContainerPort: 8082
+              HostPort: 8082
+          LogConfiguration: 
+            LogDriver: awslogs
+            Options: 
+              awslogs-group: '/ecs/example/'
+              awslogs-region: !Ref AWS::Region
+              awslogs-create-group: true
+              awslogs-stream-prefix: 'service-provider-history'
+      Cpu: 512
+      Memory: 1024
+      NetworkMode: awsvpc
+      ExecutionRoleArn: !GetAtt ECSRoleWithECRAccess.Arn
+      TaskRoleArn: !GetAtt ECSRoleWithECRAccess.Arn
+      RequiresCompatibilities: 
+        - FARGATE
+      RuntimePlatform: 
+        CpuArchitecture: X86_64
+        OperatingSystemFamily: LINUX
+
+  ProviderMathTaskDefinition: 
+    Type: AWS::ECS::TaskDefinition
+    Properties: 
+      Family: !Ref ProviderMathFamily
+      ContainerDefinitions: 
+        - Name: provider-math-container
+          Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/service-provider-math:latest
+          Cpu: 512
+          Memory: 1024
+          PortMappings:
+            - ContainerPort: 8081
+              HostPort: 8081
+          LogConfiguration: 
+            LogDriver: awslogs
+            Options: 
+              awslogs-group: '/ecs/example/'
+              awslogs-region: !Ref AWS::Region
+              awslogs-create-group: true
+              awslogs-stream-prefix: 'service-provider-math'
+      Cpu: 512
+      Memory: 1024
+      NetworkMode: awsvpc
+      ExecutionRoleArn: !GetAtt ECSRoleWithECRAccess.Arn
+      TaskRoleArn: !GetAtt ECSRoleWithECRAccess.Arn
+      RequiresCompatibilities: 
+        - FARGATE
+      RuntimePlatform: 
+        CpuArchitecture: X86_64
+        OperatingSystemFamily: LINUX  
+
+Outputs:
+  ExamAggregatorTaskDefinitionArn:
+    Description: Exam Aggregator task definition ARN
+    Value: !Ref ExamAggregatorTaskDefinition
+    Export:
+      Name: !Sub ${AWS::Region}-exam-aggregator-task-definition
+  ProviderHistoryTaskDefinitionArn:
+    Description: Provider History task definition ARN
+    Value: !Ref ProviderHistoryTaskDefinition
+    Export:
+      Name: !Sub ${AWS::Region}-provider-history-task-definition  
+  ProviderMathTaskDefinitionArn:
+    Description: Provider Math task definition ARN
+    Value: !Ref ProviderMathTaskDefinition
+    Export:
+      Name: !Sub ${AWS::Region}-provider-math-task-definition  

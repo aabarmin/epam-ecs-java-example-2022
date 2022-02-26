@@ -1,0 +1,96 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Services
+
+Resources: 
+  ExamAggregatorService:
+    Type: AWS::ECS::Service
+    Properties: 
+      ServiceName: ExamAggregatorService
+      Cluster: 
+        Fn::ImportValue: 
+          Fn::Sub: ${AWS::Region}-ecs-cluster
+      DesiredCount: 1
+      LaunchType: FARGATE
+      NetworkConfiguration: 
+        AwsvpcConfiguration: 
+          AssignPublicIp: ENABLED
+          SecurityGroups: 
+            - Fn::ImportValue:
+                Fn::Sub: ${AWS::Region}-ingress-security-group
+          Subnets: 
+            - Fn::ImportValue :
+                Fn::Sub: ${AWS::Region}-public-subnet
+      TaskDefinition:
+        Fn::ImportValue:
+          Fn::Sub: ${AWS::Region}-exam-aggregator-task-definition
+
+  ProviderHistoryService:
+    Type: AWS::ECS::Service
+    Properties: 
+      ServiceName: ProviderHistoryService
+      Cluster: 
+        Fn::ImportValue: 
+          Fn::Sub: ${AWS::Region}-ecs-cluster
+      DesiredCount: 1
+      LaunchType: FARGATE
+      NetworkConfiguration: 
+        AwsvpcConfiguration: 
+          AssignPublicIp: ENABLED
+          SecurityGroups: 
+            - Fn::ImportValue:
+                Fn::Sub: ${AWS::Region}-ingress-security-group
+          Subnets: 
+            - Fn::ImportValue :
+                Fn::Sub: ${AWS::Region}-public-subnet
+      TaskDefinition:
+        Fn::ImportValue:
+          Fn::Sub: ${AWS::Region}-provider-history-task-definition
+      ServiceRegistries: 
+        - RegistryArn: !GetAtt ProviderHistoryRegistration.Arn
+
+  ProviderHistoryRegistration:
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      Description: Registration of the History Provider in the Service Discovery
+      Name: provider-history
+      NamespaceId: !Ref CloudMapPrivateDnsNamespace
+      DnsConfig:
+        RoutingPolicy: MULTIVALUE
+        DnsRecords: 
+          - TTL: 60
+            Type: A
+
+  CloudMapPrivateDnsNamespace:
+    Type: AWS::ServiceDiscovery::PrivateDnsNamespace
+    Properties:
+      Description: ECS Service Discovery
+      Name: local
+      Vpc: 
+        Fn::ImportValue:
+          Fn::Sub: ${AWS::Region}-vpc
+      Properties:
+        DnsProperties:
+          SOA:
+            TTL: 60
+
+  # ProviderMathService:
+  #   Type: AWS::ECS::Service
+  #   Properties: 
+  #     ServiceName: ProviderMathService
+  #     Cluster: 
+  #       Fn::ImportValue: 
+  #         Fn::Sub: ${AWS::Region}-ecs-cluster
+  #     DesiredCount: 1
+  #     LaunchType: FARGATE
+  #     NetworkConfiguration: 
+  #       AwsvpcConfiguration: 
+  #         AssignPublicIp: ENABLED
+  #         SecurityGroups: 
+  #           - Fn::ImportValue:
+  #               Fn::Sub: ${AWS::Region}-ingress-security-group
+  #         Subnets: 
+  #           - Fn::ImportValue :
+  #               Fn::Sub: ${AWS::Region}-public-subnet
+  #     TaskDefinition:
+  #       Fn::ImportValue:
+  #         Fn::Sub: ${AWS::Region}-provider-math-task-definition  
