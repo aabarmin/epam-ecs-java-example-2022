@@ -8,16 +8,15 @@ phases:
     commands:
       - echo "Preparing Apache Maven for build"
       - chmod +x ./mvnw
-      - echo "Logging in to AWS ECR"
-      - |
-        AWS_REPO_URL=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
-        aws ecr get-login-password --region $AWS_DEFAULT_REGION | \
-          docker login --username AWS --password-stdin ${AWS_REPO_URL}
 
   build:
     commands:
       - echo "Build with Apache Maven"
       - ./mvnw clean package
+      - echo "Logging into Corretto ECR"
+      - |
+        aws ecr get-login-password --region us-west-2 | \
+          docker login --username AWS --password-stdin 489478819445.dkr.ecr.us-west-2.amazonaws.com
       - echo "Building Docker images"
       - |
         docker build -f ./bin/Dockerfile \
@@ -37,6 +36,11 @@ phases:
 
   post_build:
     commands:
+      - echo "Logging in to AWS ECR"
+      - |
+        AWS_REPO_URL=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+        aws ecr get-login-password --region $AWS_DEFAULT_REGION | \
+          docker login --username AWS --password-stdin ${AWS_REPO_URL}
       - echo Pushing Docker images to ECR
       - docker push ${AWS_REPO_URL}/service-exam-aggregator:latest
       - docker push ${AWS_REPO_URL}/service-provider-history:latest
