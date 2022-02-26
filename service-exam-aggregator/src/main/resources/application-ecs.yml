@@ -1,6 +1,6 @@
 aggregator:
   providers:
     - name: math
-      endpoint: http://provider-math.local:8081/
+      endpoint: http://provider-math.local:8080/
     - name: history
-      endpoint: http://provider-history.local:8082/
+      endpoint: http://provider-history.local:8080/
