@@ -12,17 +12,27 @@ Parameters:
     Type: String
     Default: 172.16.0.0/16
 
-  PublicSubnetCIDR:
-    Description: CIDR for the public subnet
+  PublicSubnet1CIDR:
+    Description: CIDR for the first public subnet
     Type: String
-    Default: 172.16.1.0/24
+    Default: 172.16.10.0/24
+
+  PublicSubnet2CIDR:
+    Description: CIDR for the second public subnet
+    Type: String
+    Default: 172.16.11.0/24
 
   PrivateSubnetCIDR:
     Description: CIDR for the private subnet
     Type: String
-    Default: 172.16.2.0/24
+    Default: 172.16.20.0/24
 
 Resources:
+
+  ###########################################################
+  # VPC and Subnets
+  ###########################################################
+
   VPC:
     Type: AWS::EC2::VPC
     Properties:
@@ -32,6 +42,43 @@ Resources:
       Tags:
         - Key: Name
           Value: !Ref VpcName
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      CidrBlock: !Ref PublicSubnet1CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName} Public Subnet 1
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs '' ]
+      CidrBlock: !Ref PublicSubnet2CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName} Public Subnet 2
+
+  PrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      CidrBlock: !Ref PrivateSubnetCIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName} Private Subnet          
+
+  ###########################################################
+  # Internet Gateway
+  ###########################################################          
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
@@ -46,27 +93,9 @@ Resources:
       InternetGatewayId: !Ref InternetGateway
       VpcId: !Ref VPC
 
-  PublicSubnet:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      AvailabilityZone: !Select [ 0, !GetAZs '' ]
-      CidrBlock: !Ref PublicSubnetCIDR
-      MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: !Sub ${VpcName} Public Subnet
-
-  PrivateSubnet:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      AvailabilityZone: !Select [ 0, !GetAZs '' ]
-      CidrBlock: !Ref PrivateSubnetCIDR
-      MapPublicIpOnLaunch: false
-      Tags:
-        - Key: Name
-          Value: !Sub ${VpcName} Private Subnet
+  ###########################################################
+  # Public Route Table
+  ###########################################################       
 
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
@@ -74,7 +103,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub ${VpcName} Route Table
+          Value: !Sub ${VpcName} Public Route Table
 
   DefaultPublicRoute:
     Type: AWS::EC2::Route
@@ -84,27 +113,145 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
 
-  PublicSubnetRouteTableAssociation:
+  PublicSubnet1RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PublicRouteTable
-      SubnetId: !Ref PublicSubnet
+      SubnetId: !Ref PublicSubnet1
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet2
+
+  ###########################################################
+  # NAT Gateway and Private Route Table
+  ###########################################################       
+
+  PrivateSubnetNatGatewayEIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+
+  PrivateSubnetNatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt PrivateSubnetNatGatewayEIP.AllocationId
+      SubnetId: !Ref PrivateSubnet
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName} Private Route Table
+
+  DefaultPrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref PrivateSubnetNatGateway
+
+  PrivateRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: 
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnet  
+
+  ###########################################################
+  # ALB and Target Groups
+  ###########################################################       
+
+  IngressLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties: 
+      IpAddressType: ipv4
+      Name: ingress-load-balancer
+      Scheme: internet-facing
+      SecurityGroups: 
+        - !GetAtt IngressSecurityGroup.GroupId
+      Type: application
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+
+  IngressLoadBalancerListener: 
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref IngressLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref IngressLoadBalancerTargetGroup
+
+  IngressLoadBalancerTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties: 
+      Name: ecs-target-group
+      Port: 8080
+      Protocol: HTTP
+      TargetType: ip
+      VpcId: !Ref VPC
+      HealthCheckPath: /actuator/health
+      HealthCheckPort: 8080   
+
+  ###########################################################
+  # Security Groups
+  ###########################################################       
 
   IngressSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupName: "Allow 8080 and 80"
+      GroupName: "Allow 80 only"
       GroupDescription: Allows access from the external world
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - CidrIp: 0.0.0.0/0
-          FromPort: 8080
-          ToPort: 8080
-          IpProtocol: tcp
-        - CidrIp: 0.0.0.0/0
           FromPort: 80
           ToPort: 80
           IpProtocol: tcp
+      Tags:
+        - Key: Name
+          Value: Allows access from the external world
+
+  LoadBalancerOnlySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: "Allow access from ALB"
+      GroupDescription: Allows access from ALB to containers
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - SourceSecurityGroupId: !GetAtt IngressSecurityGroup.GroupId
+          FromPort: 8080
+          ToPort: 8080
+          IpProtocol: tcp
+      Tags:
+        - Key: Name
+          Value: Allows access from ALB to containers
+
+  InterContainerCommunicationSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: "Allow communication between services"
+      GroupDescription: Allow communication between services
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - CidrIp: !Ref PublicSubnet1CIDR
+          FromPort: 8080
+          ToPort: 8080
+          IpProtocol: tcp
+        - CidrIp: !Ref PublicSubnet2CIDR
+          FromPort: 8080
+          ToPort: 8080
+          IpProtocol: tcp
+      Tags:
+        - Key: Name
+          Value: Allow communication between services
 
 Outputs: 
   VPCID:
@@ -112,13 +259,36 @@ Outputs:
     Value: !Ref VPC
     Export:
       Name: !Sub ${AWS::Region}-vpc
+  IngressLoadBalancerUrl: 
+    Description: URL to access the application
+    Value: !GetAtt IngressLoadBalancer.DNSName
+  IngressLoadBalancerTargetGroupArn:
+    Description: ARN of the target group
+    Value: !Ref IngressLoadBalancerTargetGroup
+    Export: 
+      Name: !Sub ${AWS::Region}-load-balancer-target-group
   IngressSecurityGroupID:
-    Description: ID of the ingress security group
-    Value: !GetAtt IngressSecurityGroup.GroupId
+    Description: ID of the load balancer security group
+    Value: !GetAtt LoadBalancerOnlySecurityGroup.GroupId
     Export:
       Name: !Sub ${AWS::Region}-ingress-security-group
-  PublicSubnetID:
-    Description: ID of the public subnet
-    Value: !Ref PublicSubnet
+  InterContainerCommunicationSecurityGroupID:
+    Description: ID of the security group that allows communication between services
+    Value: !GetAtt InterContainerCommunicationSecurityGroup.GroupId
     Export:
-      Name: !Sub ${AWS::Region}-public-subnet
+      Name: !Sub ${AWS::Region}-ecs-security-group
+  PublicSubnet1ID:
+    Description: ID of the first public subnet
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: !Sub ${AWS::Region}-public-subnet1
+  PublicSubnet2ID:
+    Description: ID of the second public subnet
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: !Sub ${AWS::Region}-public-subnet2
+  PrivateSubnetID:
+    Description: ID of the private subnet
+    Value: !Ref PrivateSubnet
+    Export:
+      Name: !Sub ${AWS::Region}-private-subnet

@@ -17,9 +17,19 @@ Resources:
           SecurityGroups: 
             - Fn::ImportValue:
                 Fn::Sub: ${AWS::Region}-ingress-security-group
+            - Fn::ImportValue:
+                Fn::Sub: ${AWS::Region}-ecs-security-group                
           Subnets: 
             - Fn::ImportValue :
-                Fn::Sub: ${AWS::Region}-public-subnet
+                Fn::Sub: ${AWS::Region}-public-subnet1
+            - Fn::ImportValue:
+                Fn::Sub: ${AWS::Region}-public-subnet2
+      LoadBalancers:
+        - ContainerPort: 8080
+          ContainerName: exam-aggregator-container
+          TargetGroupArn: 
+            Fn::ImportValue:
+              Fn::Sub: ${AWS::Region}-load-balancer-target-group
       TaskDefinition:
         Fn::ImportValue:
           Fn::Sub: ${AWS::Region}-exam-aggregator-task-definition
@@ -39,9 +49,13 @@ Resources:
           SecurityGroups: 
             - Fn::ImportValue:
                 Fn::Sub: ${AWS::Region}-ingress-security-group
+            - Fn::ImportValue:
+                Fn::Sub: ${AWS::Region}-ecs-security-group
           Subnets: 
             - Fn::ImportValue :
-                Fn::Sub: ${AWS::Region}-public-subnet
+                Fn::Sub: ${AWS::Region}-public-subnet1
+            - Fn::ImportValue:
+                Fn::Sub: ${AWS::Region}-public-subnet2
       TaskDefinition:
         Fn::ImportValue:
           Fn::Sub: ${AWS::Region}-provider-history-task-definition
