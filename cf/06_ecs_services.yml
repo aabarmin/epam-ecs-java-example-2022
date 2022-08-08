@@ -20,7 +20,7 @@ Resources:
             - Fn::ImportValue:
                 Fn::Sub: ${AWS::Region}-ecs-security-group                
           Subnets: 
-            - Fn::ImportValue :
+            - Fn::ImportValue:
                 Fn::Sub: ${AWS::Region}-public-subnet1
             - Fn::ImportValue:
                 Fn::Sub: ${AWS::Region}-public-subnet2

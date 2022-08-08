@@ -1,0 +1,6 @@
+aggregator:
+  providers:
+    - name: math
+      endpoint: http://provider-math:8080/
+    - name: history
+      endpoint: http://provider-history:8080/

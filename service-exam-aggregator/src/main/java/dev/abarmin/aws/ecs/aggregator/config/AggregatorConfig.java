@@ -20,6 +20,8 @@ public class AggregatorConfig {
   @Size(min = 1)
   private Collection<ProviderConfig> providers = Lists.newArrayList();
 
+  private boolean correctMoonPhase = true;
+
   public boolean hasProvider(final String name) {
     return getProvider(name).isPresent();
   }

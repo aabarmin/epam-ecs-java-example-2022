@@ -1,0 +1,11 @@
+GET http://localhost:8080/actuator/health
+
+###
+POST http://localhost:8080/
+Content-Type: application/json
+
+{
+  "math": 10,
+  "history": 10
+}
+

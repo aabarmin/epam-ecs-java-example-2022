@@ -1,0 +1,33 @@
+version: '2.4'
+
+services:
+  aggregator:
+    image: aggregator:latest
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    ports:
+      - "8080:8080"
+    mem_limit: 256M
+    depends_on:
+      provider-math:
+        condition: service_healthy
+      provider-history:
+        condition: service_healthy
+
+  provider-math:
+    image: provider-math:latest
+    mem_limit: 256M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  provider-history:
+    image: provider-history:latest
+    mem_limit: 256M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
