@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aggregator-deployment
+  namespace: training-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: aggregator
+  template:
+    metadata:
+      labels:
+        name: aggregator
+    spec:
+      containers:
+        - name: aggregator-container
+          image: application/aggregator:latest
+          imagePullPolicy: Never
+          resources:
+            limits:
+              memory: "256M"
+          livenessProbe:
+            httpGet:
+              port: 8080
+              path: /actuator/health/liveness
+          readinessProbe:
+            httpGet:
+              port: 8080
+              path: /actuator/health/readiness
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: provider-history-deployment
+  namespace: training-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: provider-history
+  template:
+    metadata:
+      labels:
+        name: provider-history
+    spec:
+      containers:
+        - name: provider-history-container
+          image: application/provider-history:latest
+          imagePullPolicy: Never
+          livenessProbe:
+            httpGet:
+              port: 8080
+              path: /actuator/health/liveness
+          readinessProbe:
+            httpGet:
+              port: 8080
+              path: /actuator/health/readiness
+          resources:
+            limits:
+              memory: "256M"
+          ports:
+            - containerPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: provider-math-deployment
+  namespace: training-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: provider-math
+  template:
+    metadata:
+      labels:
+        name: provider-math
+    spec:
+      containers:
+        - name: provider-math-container
+          image: application/provider-math:latest
+          imagePullPolicy: Never
+          livenessProbe:
+            httpGet:
+              port: 8080
+              path: /actuator/health/liveness
+          readinessProbe:
+            httpGet:
+              port: 8080
+              path: /actuator/health/readiness
+          resources:
+            limits:
+              memory: "256M"
+          ports:
+            - containerPort: 8080
